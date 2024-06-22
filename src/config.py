@@ -9,11 +9,14 @@ INVALID_TXN_ID = -1
 # invalid log sequence number
 INVALID_LSN = -1
 
+# Format for a 4-byte integer (int32_t)
+LSN_FORMAT = "i"
+
 # the header page id
 HEADER_PAGE_ID = 0
 
 # size of a data page in byte
-BUSTUB_PAGE_SIZE = 4096
+PAGE_SIZE = 4096
 
 # size of buffer pool
 BUFFER_POOL_SIZE = 10
