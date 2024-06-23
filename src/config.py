@@ -21,6 +21,7 @@ PAGE_SIZE = 4096
 # size of buffer pool
 BUFFER_POOL_SIZE = 10
 
+size_type = int
 
 # Type aliases
 frame_id_t = int

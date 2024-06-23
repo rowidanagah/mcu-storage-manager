@@ -1,0 +1,2 @@
+class BasicPageGuard:
+    pass

@@ -32,7 +32,7 @@ class Page:
 
     def getData(self):
         """* @return the actual data contained within this page *"""
-        return self._data__
+        return self._data_
 
     def getPageId(self) -> page_id_t:
         """* @return the page id of this page *"""

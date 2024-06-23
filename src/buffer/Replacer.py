@@ -9,7 +9,7 @@ class Replacer(ABC):
     def victim(frame_id) -> bool:
         """
         * Remove the victim frame as defined by the replacement policy.
-        * @param[out] frame_id id of frame that was removed, nullptr if no victim was found
+        * @param[out] frame_id id of frame that was removed, null if no victim was found
         * @return true if a victim frame was found, false otherwise
         """
         pass
