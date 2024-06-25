@@ -73,3 +73,6 @@ class Page:
         self._data_[self.__OFFSET_PAGE_START :] = bytearray(
             PAGE_SIZE - self.__OFFSET_PAGE_START
         )
+
+    def __str__(self) -> str:
+        return f"This page with page id equals to:  {self._page_id_} has number of pin of {self._pin_count_}"
