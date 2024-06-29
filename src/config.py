@@ -31,3 +31,12 @@ txn_id_t = int
 lsn_t = int
 slot_offset_t = int
 oid_t = int
+
+
+
+from typing import TypeVar, List, Callable
+
+KeyType = TypeVar('KeyType')
+ValueType = TypeVar('ValueType')
+KeyComparator = TypeVar('KeyComparator')
+

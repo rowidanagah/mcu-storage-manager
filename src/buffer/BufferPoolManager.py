@@ -1,7 +1,7 @@
 from src.config import size_t, page_id_t
 from src.storage.DiskManager import DiskManager
 from src.recovery.LogManager import LogManager
-from src.storage.Page import Page
+from src.storage.Page.Page import Page
 from src.storage.BasicPageGuard import BasicPageGuard
 from src.storage.WriteBackCache import WriteBackCache
 from src.buffer.LRUReplacer import LRUReplacer
