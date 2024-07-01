@@ -1,6 +1,6 @@
 from src.hash_table_page_defs import BUCKET_ARRAY_SIZE
 from typing import List, Callable
-from src.config import KeyType, ValueType
+from src.config import KeyType, ValueType, INVALID_PAGE_ID
 
 """
 * Store indexed key and and value together within bucket page. Supports
@@ -28,6 +28,7 @@ class HashTableBucketPage:
         self._readable_ = [0] * ((BUCKET_ARRAY_SIZE - 1) // 8 + 1)
         # Initialize array for key-value pairs
         self._array_: List[dict] = [{} for _ in range(BUCKET_ARRAY_SIZE)]
+        self._page_id = INVALID_PAGE_ID
 
     def GetValue(
         self,
@@ -158,33 +159,36 @@ class HashTableBucketPage:
         # to set the bit at bit_idx in the byte at byte_idx to 1
         self._occupied_[byte_idx] |= 1 << bit_idx
 
-
-bucket = HashTableBucketPage()
-
-
-def key_comparator(key, dic):
-    return key in dic
+    def __str__(self) -> str:
+        return f"This Hash Bucket page with page id equals to:  {self._page_id} "
 
 
-# Insert some key-value pairs
-bucket.Insert("key", "val")
+# bucket = HashTableBucketPage()
 
-bucket.Insert("key2", "val")
 
-bucket.SetReadable(2)
-bucket.Insert("key2", "val")
-bucket.Insert("key3", "val")
-print(bucket._array_)
-print("=================check get val=============================================")
+# def key_comparator(key, dic):
+#     return key in dic
 
-# Get values for a specific key
-key_to_search_no_found, key_to_search = "key3", "key65"
-res = []
-values1 = bucket.GetValue(key_to_search_no_found, key_comparator, res)
-print("==============================================================")
-values = bucket.GetValue(key_to_search, key_comparator, res)
-print(
-    f"Values for key '{key_to_search} and {key_to_search_no_found}': {values} {values1}",
-    res,
-)
-print(bucket.keyAt(2), bucket._array_)
+
+# # Insert some key-value pairs
+# bucket.Insert("key", "val")
+
+# bucket.Insert("key2", "val")
+
+# bucket.SetReadable(2)
+# bucket.Insert("key2", "val")
+# bucket.Insert("key3", "val")
+# print(bucket._array_)
+# print("=================check get val=============================================")
+
+# # Get values for a specific key
+# key_to_search_no_found, key_to_search = "key3", "key65"
+# res = []
+# values1 = bucket.GetValue(key_to_search_no_found, key_comparator, res)
+# print("==============================================================")
+# values = bucket.GetValue(key_to_search, key_comparator, res)
+# print(
+#     f"Values for key '{key_to_search} and {key_to_search_no_found}': {values} {values1}",
+#     res,
+# )
+# print(bucket.keyAt(2), bucket._array_)

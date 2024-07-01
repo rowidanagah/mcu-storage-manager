@@ -26,7 +26,7 @@ class HashTableDirectoryPage:
     def __init__(self) -> None:
         self._page_id_: page_id_t = INVALID_PAGE_ID
         self._lsn_: lsn_t = INVALID_PAGE_ID
-        self._global_depth_ = 0
+        self._global_depth_ = 1
         self._local_depths_ = [0] * DIRECTORY_ARRAY_SIZE
         self._bucket_page_ids_: page_id_t = [0] * DIRECTORY_ARRAY_SIZE
 
@@ -58,6 +58,12 @@ class HashTableDirectoryPage:
         *"""
         return self._bucket_page_ids_[bucket_idx]
 
+    def FetchBucketPage(self, bucket_idx, bpm):
+        bucket_id = self.GetBucketPageId(bucket_idx)
+        if bucket_id != INVALID_PAGE_ID:
+            return bpm.FetchPage(bucket_id)
+        return None
+
     def GetLocalDepth(self, bucket_idx):
         """**
         * Gets the local depth of the bucket at bucket_idx
@@ -86,6 +92,11 @@ class HashTableDirectoryPage:
         self._bucket_page_ids_[bucket_idx] = bucket_page_id
 
     def GetGlobalDepth(self):
+        """**
+        * Get the global depth of the hash table directory
+        *
+        * @return the global depth of the directory
+        *"""
         return self._global_depth_
 
     def GetSplitImageIndex(self, bucket_idx):
@@ -112,17 +123,31 @@ class HashTableDirectoryPage:
         *
         * @return mask of global_depth 1's and the rest 0's (with 1's from LSB upwards)
         *"""
-        pass
+        return (1 << self._global_depth_) - 1
 
     def IncrGlobalDepth(self):
         """** Decrement the global depth of the directory. *"""
         self._global_depth_ += 1
 
+    def DecrLocalDepth(self):
+        """**
+        * Decrement the local depth of the bucket at bucket_idx
+        * @param bucket_idx bucket index to decrement
+        *"""
+        self._local_depths_ -= 1
+
+    def GetNumBuckets(self):
+        """* Returns number of Buckets so far"""
+        return 1 << self._global_depth_
+
+    def __str__(self) -> str:
+        return f"This Hash Directory page  with page id equals to:  {self._page_id_} "
+
 
 directory_page = HashTableDirectoryPage()
 directory_page.SetPageId(1)
 directory_page.SetLsn(100)
-directory_page.SetLocalDepth(2,9)
+directory_page.SetLocalDepth(2, 9)
 directory_page.SetLocalDepth(0, 1)
 directory_page.SetBucketPageId(0, 10)
 
@@ -131,3 +156,5 @@ print("LSN:", directory_page.GetLsn())
 print("Global Depth:", directory_page.GetLocalDepth(1))
 print("Local Depth of bucket 0:", directory_page.GetLocalDepth(0))
 print("Bucket Page ID of bucket 0:", directory_page.GetBucketPageId(0))
+
+print("Number of Buckets we have so far: ", directory_page.GetNumBuckets())

@@ -1,4 +1,4 @@
-from src.config import size_t, page_id_t
+from src.config import size_t, page_id_t, INVALID_PAGE_ID
 from src.storage.DiskManager import DiskManager
 from src.recovery.LogManager import LogManager
 from src.storage.Page.Page import Page
@@ -50,7 +50,7 @@ class BufferPoolManager:
         """*  Return the pointer to all the pages in the buffer pool. *"""
         return self.pages
 
-    def NewPage(self, page_id: page_id_t) -> Page:
+    def NewPage(self, page_id: [page_id_t]) -> Page:
         """**
         * TODO(P1): Add implementation
         *
@@ -95,9 +95,10 @@ class BufferPoolManager:
             print("allocated page id is : ", allocated_page_id)
             self._page_table[allocated_page_id] = frame_id
             page = Page()
-            page._page_id_, page._pin_count_ = page_id, 1
+            page_id.append(allocated_page_id)
+            page._page_id_, page._pin_count_ = allocated_page_id, 1
             self._replacer.pin(frame_id)
-            self._pages[frame_id]._page_id_ = page_id
+            self._pages[frame_id]._page_id_ = allocated_page_id
             print("created page", page)
             return self._pages[frame_id]
 
@@ -159,11 +160,14 @@ class BufferPoolManager:
 
                 del self._page_table[page._page_id_]
 
+            print(frame_id, "frame is ")
             page = self._pages[frame_id]
             self._page_table[page_id] = frame_id
+            print("page id is ==========:", page_id)
             self.disk_manager.readPage(page_id, "")
             page._pin_count_, page._is_dirty_, page._page_id_ = 1, False, page_id
             self._replacer.pin(page._page_id_)
+            print("ppppppppppppppppppppppppppppppp", page)
             return page
 
     def UnpinPage(self, page_id: page_id_t, is_dirty=None) -> bool:
@@ -211,7 +215,7 @@ class BufferPoolManager:
         *
         """
         with self._latch_:
-            if page_id not in self._page_table:
+            if page_id not in self._page_table or page_id == INVALID_PAGE_ID:
                 return False
             frame_id = self._page_table[page_id]
             page = self._pages[frame_id]
@@ -274,72 +278,74 @@ class BufferPoolManager:
             self._next_page_id_ -= 1
 
 
-db_name = "test.db"
-buffer_pool_size = 10
+# db_name = "test.db"
+# buffer_pool_size = 10
 
-# disk_manager = DiskManager(db_name)
-bpm = BufferPoolManager(buffer_pool_size, db_name)
-print(bpm._page_table)
+# # disk_manager = DiskManager(db_name)
+# bpm = BufferPoolManager(buffer_pool_size, db_name)
+# print(bpm._page_table)
 
-# bpm.NewPage(2)
-# bpm.NewPage(3)
-print(bpm._page_table)
+# # bpm.NewPage(2)
+# # bpm.NewPage(3)
+# print(bpm._page_table)
 
 
-def test_buffer_pool_manager():
-    buffer_pool = BufferPoolManager(3, db_name)
+# def test_buffer_pool_manager():
+#     buffer_pool, res = BufferPoolManager(3, db_name), []
 
-    # Create a new page
-    new_page = buffer_pool.NewPage(3)
-    assert (
-        new_page is not None
-    ), "Failed to create a new page when there should be free frames."
-    print(f"Created new page with id {new_page._page_id_}.")
+#     # Create a new page
+#     new_page = buffer_pool.NewPage(res)
+#     print(res, " ============== res of new page is")
+#     assert (
+#         new_page is not None
+#     ), "Failed to create a new page when there should be free frames."
+#     print(f"Created new page with id {new_page._page_id_}.")
 
-    # Fetch the created page
-    fetched_page = buffer_pool.FetchPage(new_page._page_id_)
-    assert fetched_page is not None, "Failed to fetch the created page."
-    assert (
-        fetched_page._page_id_ == new_page._page_id_
-    ), "Fetched page id does not match the created page id."
-    print(f"Fetched page with id {fetched_page._page_id_}.")
+#     # Fetch the created page
+#     fetched_page = buffer_pool.FetchPage(new_page._page_id_)
+#     assert fetched_page is not None, "Failed to fetch the created page."
+#     assert (
+#         fetched_page._page_id_ == new_page._page_id_
+#     ), "Fetched page id does not match the created page id."
+#     print(f"Fetched page with id {fetched_page._page_id_}.")
 
-    # Unpin the fetched page
-    assert (
-        buffer_pool.UnpinPage(new_page._page_id_, True) is True
-    ), "Failed to unpin the page."
-    print(f"Unpinned page with id {new_page._page_id_}.")
+#     # Unpin the fetched page
+#     assert (
+#         buffer_pool.UnpinPage(new_page._page_id_, True) is True
+#     ), "Failed to unpin the page."
+#     print(f"Unpinned page with id {new_page._page_id_}.")
 
-    # Create another page
-    another_new_page = buffer_pool.NewPage(6)
-    assert (
-        another_new_page is not None
-    ), "Failed to create another new page when there should be free frames."
-    print(f"Created another new page with id {another_new_page._page_id_}.")
+#     # Create another page
+#     another_new_page = buffer_pool.NewPage([])
+#     assert (
+#         another_new_page is not None
+#     ), "Failed to create another new page when there should be free frames."
+#     print(f"Created another new page with id {another_new_page._page_id_}.")
 
-    # Fetch the new page
-    fetched_page2 = buffer_pool.FetchPage(another_new_page._page_id_)
-    assert fetched_page2 is not None, "Failed to fetch the newly created page."
-    assert (
-        fetched_page2._page_id_ == another_new_page._page_id_
-    ), "Fetched page id does not match the newly created page id."
-    print(f"Fetched another new page with id {fetched_page2._page_id_}.")
+#     # Fetch the new page
+#     fetched_page2 = buffer_pool.FetchPage(another_new_page._page_id_)
+#     assert fetched_page2 is not None, "Failed to fetch the newly created page."
+#     assert (
+#         fetched_page2._page_id_ == another_new_page._page_id_
+#     ), "Fetched page id does not match the newly created page id."
+#     print(f"Fetched another new page with id {fetched_page2._page_id_}.")
 
-    # Flush the page to disk
-    assert (
-        buffer_pool.FlushPage(another_new_page._page_id_) is True
-    ), "Failed to flush the page to disk."
-    print(f"Flushed page with id {another_new_page._page_id_} to disk.")
+#     # Flush the page to disk
+#     assert (
+#         buffer_pool.FlushPage(another_new_page._page_id_) is True
+#     ), "Failed to flush the page to disk."
+#     print(f"Flushed page with id {another_new_page._page_id_} to disk.")
 
-    # Delete the page
-    assert (
-        buffer_pool.DeletePage(another_new_page._page_id_) is False
-    ), "Failed to delete the page."
-    print(f"Deleted page with id {another_new_page._page_id_}.")
+#     # Delete the page
+#     assert (
+#         buffer_pool.DeletePage(another_new_page._page_id_) is False
+#     ), "Failed to delete the page."
+#     print(f"Deleted page with id {another_new_page._page_id_}.")
 
-    # Flush all pages
-    buffer_pool.FlushAllPages()
-    print("Flushed all pages to disk.")
+#     # Flush all pages
+#     buffer_pool.FlushAllPages()
+#     print("Flushed all pages to disk.")
 
-# Run the test
-test_buffer_pool_manager()
+
+# # Run the test
+# test_buffer_pool_manager()
