@@ -1,6 +1,7 @@
 from src.hash_table_page_defs import BUCKET_ARRAY_SIZE
 from typing import List, Callable
 from src.config import KeyType, ValueType, INVALID_PAGE_ID
+from src.storage.Page import Page
 
 """
 * Store indexed key and and value together within bucket page. Supports
@@ -28,7 +29,8 @@ class HashTableBucketPage:
         self._readable_ = [0] * ((BUCKET_ARRAY_SIZE - 1) // 8 + 1)
         # Initialize array for key-value pairs
         self._array_: List[dict] = [{} for _ in range(BUCKET_ARRAY_SIZE)]
-        self._page_id = INVALID_PAGE_ID
+        self._page_id_ = INVALID_PAGE_ID
+        self._pin_count_: int = 0
 
     def GetValue(
         self,
@@ -160,7 +162,7 @@ class HashTableBucketPage:
         self._occupied_[byte_idx] |= 1 << bit_idx
 
     def __str__(self) -> str:
-        return f"This Hash Bucket page with page id equals to:  {self._page_id} "
+        return f"This Hash Bucket page with page id equals to:  {self._page_id_} "
 
 
 # bucket = HashTableBucketPage()

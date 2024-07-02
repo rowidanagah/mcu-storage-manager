@@ -48,18 +48,22 @@ class DiskExtendibleHashTable:
         self._bucket_max_size_ = HTableBucketArraySize(sizeOfMappingType)
         self._table_latch_ = ReaderWriterLatch()
 
-        initial_directory_page = self._bpm.AllocatePage()
+        initial_directory_page, allocated_frame_id = self._bpm.AllocatePage()
         self._directory = HashTableDirectoryPage()
         self._directory.SetPageId(initial_directory_page)
+        self._bpm._pages[allocated_frame_id] = self._directory
         bpm.UnpinPage(initial_directory_page)
 
         # Allocate initial buckets
+        print(
+            "========================== Allocate initial buckets ====================="
+        )
         for i in range(2 ** self._directory.GetGlobalDepth()):
-            page_id = self._bpm.AllocatePage()
+            page_id, allocated_frame_id = self._bpm.AllocatePage()
             bucket_page = HashTableBucketPage()
-            bucket_page._page_id = page_id
+            bucket_page._page_id_ = page_id
             self._directory.SetBucketPageId(i, page_id)
-            self._bpm._pages[page_id] = bucket_page
+            self._bpm._pages[allocated_frame_id] = bucket_page
 
     def _Hash(self):
         """**
@@ -72,6 +76,9 @@ class DiskExtendibleHashTable:
         pass
 
     def getDirectoryIndex(self, key):
+        """
+        * We will want to use the least-significant bits for indexing into the directory.
+        """
         hash_value = self._hash_fn_.get_hash(key)
         mask = self._directory.GetGlobalDepthMask()
         return hash_value & mask
@@ -79,6 +86,7 @@ class DiskExtendibleHashTable:
     def Insert(self, key, value, transaction):
         """* TODO(P2): Add implementation
         * Inserts a key-value pair into the hash table.
+        * You must split a bucket if there is no room for insertion
         *
         * @param key the key to create
         * @param value the value to be associated with the key
@@ -94,6 +102,11 @@ class DiskExtendibleHashTable:
 bpm = BufferPoolManager(9, "disk_manager.db")
 
 h = DiskExtendibleHashTable("name", bpm, "bpm")
-print("hash res ", h.getDirectoryIndex("dadsdsna"))
-print(h._directory._bucket_page_ids_)
+# print("hash res ", h.getDirectoryIndex("dadsdsna"))
+print(
+    "Pages ids so far:",
+    h._bpm._pages,
+)
+
+print([i._page_id_ for i in h._bpm._pages])
 h.Insert("key", "val", "trnx")

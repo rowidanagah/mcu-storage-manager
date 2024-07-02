@@ -74,33 +74,14 @@ class BufferPoolManager:
                 print("no free list nor evictable frame")
                 return None
 
-            if self._free_list:
-                print(" 1- free list")
-                frame_id = self._free_list.pop(0)
-                print("1- founded frame list", frame_id)
-            else:
-                print("2- evictable place")
-                victim_frame_id = [None]
-                if not self._replacer.victim(victim_frame_id):
-                    return None
-                frame_id = victim_frame_id[0]
-                print("2- founded frame id ")
-                page = self._pages[frame_id]
-                print("founded page", page)
-                if page._is_dirty_:
-                    self.disk_manager.writePage(page._page_id_, page.getData())
-
-                del self._page_table[page._page_id_]
-            allocated_page_id = self.AllocatePage()
-            print("allocated page id is : ", allocated_page_id)
-            self._page_table[allocated_page_id] = frame_id
+            allocated_page_id, allocated_frame_id = self.AllocatePage()
             page = Page()
             page_id.append(allocated_page_id)
             page._page_id_, page._pin_count_ = allocated_page_id, 1
-            self._replacer.pin(frame_id)
-            self._pages[frame_id]._page_id_ = allocated_page_id
+            self._replacer.pin(allocated_frame_id)
+            self._pages[allocated_frame_id]._page_id_ = allocated_page_id
             print("created page", page)
-            return self._pages[frame_id]
+            return self._pages[allocated_frame_id]
 
     def NewPageGuarded(self, page_id: page_id_t) -> BasicPageGuard:
         """**
@@ -135,6 +116,8 @@ class BufferPoolManager:
         * @return null if page_id cannot be fetched, otherwise pointer to the requested page
         *"""
         with self._latch_:
+            if page_id == INVALID_PAGE_ID:
+                return None
             if page_id in self._page_table:
                 frame_id = self._page_table[page_id]
                 self._replacer.pin(frame_id)
@@ -230,6 +213,7 @@ class BufferPoolManager:
         *
         """
         for page in self._pages:
+            print(page._page_id_, "flush all")
             self.FetchPage(page._page_id_)
 
     def DeletePage(self, page_id: page_id_t) -> bool:
@@ -262,15 +246,37 @@ class BufferPoolManager:
         page.ResetMemory()
         return True
 
+    def _AllocateFrame(self):
+        if self._free_list:
+            print("1- Checking the free list")
+            frame_id = self._free_list.pop(0)
+            print("1.1 - Founded frame list from the free list", frame_id)
+        else:
+            print("2- Checking evictable place")
+            victim_frame_id = [None]
+            if not self._replacer.victim(victim_frame_id):
+                return None
+            frame_id = victim_frame_id[0]
+            print("2.2- Founded frame id:  ", frame_id)
+            page = self._pages[frame_id]
+            print("2.3- Founded page : ", page)
+            if page._is_dirty_:
+                self.disk_manager.writePage(page._page_id_, page.getData())
+
+            del self._page_table[page._page_id_]
+        return frame_id
+
     def AllocatePage(self) -> page_id_t:
         """**
         * Allocate a page on disk. Caller should acquire the latch before calling this function.
-        * @return the id of the allocated page
+        * @return the id of the allocated page and the frame id
         *"""
-
-        page_id = self._next_page_id_
+        allocated_frame_id = self._AllocateFrame()
+        allocated_page_id = self._next_page_id_
         self._next_page_id_ += 1
-        return page_id
+        print("allocated page id is : ", allocated_page_id)
+        self._page_table[allocated_page_id] = allocated_frame_id
+        return allocated_page_id, allocated_frame_id
 
     def DeallocatePage(self):
         """This is a no-nop right now without a more complex data structure to track deallocated pages"""
@@ -290,62 +296,62 @@ class BufferPoolManager:
 # print(bpm._page_table)
 
 
-# def test_buffer_pool_manager():
-#     buffer_pool, res = BufferPoolManager(3, db_name), []
+def test_buffer_pool_manager():
+    buffer_pool, res = BufferPoolManager(3, db_name), []
 
-#     # Create a new page
-#     new_page = buffer_pool.NewPage(res)
-#     print(res, " ============== res of new page is")
-#     assert (
-#         new_page is not None
-#     ), "Failed to create a new page when there should be free frames."
-#     print(f"Created new page with id {new_page._page_id_}.")
+    # Create a new page
+    new_page = buffer_pool.NewPage(res)
+    print(res, " ============== res of new page is")
+    assert (
+        new_page is not None
+    ), "Failed to create a new page when there should be free frames."
+    print(f"Created new page with id {new_page._page_id_}.")
 
-#     # Fetch the created page
-#     fetched_page = buffer_pool.FetchPage(new_page._page_id_)
-#     assert fetched_page is not None, "Failed to fetch the created page."
-#     assert (
-#         fetched_page._page_id_ == new_page._page_id_
-#     ), "Fetched page id does not match the created page id."
-#     print(f"Fetched page with id {fetched_page._page_id_}.")
+    # Fetch the created page
+    fetched_page = buffer_pool.FetchPage(new_page._page_id_)
+    assert fetched_page is not None, "Failed to fetch the created page."
+    assert (
+        fetched_page._page_id_ == new_page._page_id_
+    ), "Fetched page id does not match the created page id."
+    print(f"Fetched page with id {fetched_page._page_id_}.")
 
-#     # Unpin the fetched page
-#     assert (
-#         buffer_pool.UnpinPage(new_page._page_id_, True) is True
-#     ), "Failed to unpin the page."
-#     print(f"Unpinned page with id {new_page._page_id_}.")
+    # Unpin the fetched page
+    assert (
+        buffer_pool.UnpinPage(new_page._page_id_, True) is True
+    ), "Failed to unpin the page."
+    print(f"Unpinned page with id {new_page._page_id_}.")
+    print("===========End Of UnPin================================================")
+    # Create another page
+    another_new_page = buffer_pool.NewPage([])
+    assert (
+        another_new_page is not None
+    ), "Failed to create another new page when there should be free frames."
+    print(f"Created another new page with id {another_new_page._page_id_}.")
 
-#     # Create another page
-#     another_new_page = buffer_pool.NewPage([])
-#     assert (
-#         another_new_page is not None
-#     ), "Failed to create another new page when there should be free frames."
-#     print(f"Created another new page with id {another_new_page._page_id_}.")
+    # Fetch the new page
+    fetched_page2 = buffer_pool.FetchPage(another_new_page._page_id_)
+    assert fetched_page2 is not None, "Failed to fetch the newly created page."
+    assert (
+        fetched_page2._page_id_ == another_new_page._page_id_
+    ), "Fetched page id does not match the newly created page id."
+    print(f"Fetched another new page with id {fetched_page2._page_id_}.")
 
-#     # Fetch the new page
-#     fetched_page2 = buffer_pool.FetchPage(another_new_page._page_id_)
-#     assert fetched_page2 is not None, "Failed to fetch the newly created page."
-#     assert (
-#         fetched_page2._page_id_ == another_new_page._page_id_
-#     ), "Fetched page id does not match the newly created page id."
-#     print(f"Fetched another new page with id {fetched_page2._page_id_}.")
+    # Flush the page to disk
+    assert (
+        buffer_pool.FlushPage(another_new_page._page_id_) is True
+    ), "Failed to flush the page to disk."
+    print(f"Flushed page with id {another_new_page._page_id_} to disk.")
 
-#     # Flush the page to disk
-#     assert (
-#         buffer_pool.FlushPage(another_new_page._page_id_) is True
-#     ), "Failed to flush the page to disk."
-#     print(f"Flushed page with id {another_new_page._page_id_} to disk.")
+    # Delete the page
+    assert (
+        buffer_pool.DeletePage(another_new_page._page_id_) is False
+    ), "Failed to delete the page."
+    print(f"Deleted page with id {another_new_page._page_id_}.")
 
-#     # Delete the page
-#     assert (
-#         buffer_pool.DeletePage(another_new_page._page_id_) is False
-#     ), "Failed to delete the page."
-#     print(f"Deleted page with id {another_new_page._page_id_}.")
-
-#     # Flush all pages
-#     buffer_pool.FlushAllPages()
-#     print("Flushed all pages to disk.")
+    # Flush all pages
+    buffer_pool.FlushAllPages()
+    print("Flushed all pages to disk.")
 
 
-# # Run the test
+# Run the test
 # test_buffer_pool_manager()

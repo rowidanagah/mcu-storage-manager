@@ -1,5 +1,7 @@
 from src.config import page_id_t, INVALID_PAGE_ID, lsn_t
 from src.hash_table_page_defs import DIRECTORY_ARRAY_SIZE
+from src.storage.Page import Page
+from src.buffer.BufferPoolManager import BufferPoolManager
 
 """**Notes
 * The HashTableDirectoryPage doesn't get parameters directly.
@@ -24,9 +26,11 @@ class HashTableDirectoryPage:
     """
 
     def __init__(self) -> None:
+        super().__init__()
         self._page_id_: page_id_t = INVALID_PAGE_ID
         self._lsn_: lsn_t = INVALID_PAGE_ID
         self._global_depth_ = 1
+        self._pin_count_: int = 0
         self._local_depths_ = [0] * DIRECTORY_ARRAY_SIZE
         self._bucket_page_ids_: page_id_t = [0] * DIRECTORY_ARRAY_SIZE
 
@@ -89,7 +93,20 @@ class HashTableDirectoryPage:
         * @param bucket_idx directory index at which to insert page_id
         * @param bucket_page_id page_id to insert
         *"""
+        print(
+            "Inside the set bucket page id \n ",
+            "Index found is :",
+            bucket_idx,
+            " page id :",
+            bucket_page_id,
+        )
         self._bucket_page_ids_[bucket_idx] = bucket_page_id
+
+    def UnpinBucket(
+        self, bpm: BufferPoolManager, bucket_idx: page_id_t, is_dirty: bool = False
+    ):
+        page_id = self.GetBucketPageId(bucket_idx)
+        bpm.UnpinPage(page_id, is_dirty)
 
     def GetGlobalDepth(self):
         """**
@@ -139,6 +156,10 @@ class HashTableDirectoryPage:
     def GetNumBuckets(self):
         """* Returns number of Buckets so far"""
         return 1 << self._global_depth_
+
+    def SplitBucket(self):
+        """* Split a bucket if there is no room for insertion. We can split the bucket till it become full."""
+        pass
 
     def __str__(self) -> str:
         return f"This Hash Directory page  with page id equals to:  {self._page_id_} "
